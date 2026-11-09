@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # 07-OPS-ARCH §10.2/10.3: multi-stage, non-root, no build tooling at runtime, ≤ 300 MB.
-FROM node:20-bookworm-slim AS deps
+FROM node:26-bookworm-slim AS deps
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
@@ -12,7 +12,7 @@ COPY prisma ./prisma
 COPY src ./src
 RUN pnpm prisma generate && pnpm build && pnpm prune --prod && pnpm prisma generate
 
-FROM node:20-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends wget openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 1001 nodejs && useradd --uid 1001 --gid nodejs --shell /bin/false --create-home nodejs
