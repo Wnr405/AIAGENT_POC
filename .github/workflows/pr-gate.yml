@@ -1,0 +1,155 @@
+# 05-METRICS §11.4 G-03 (PR-open gate) + §11.5 G-04 (E2E before merge).
+# Required status checks on `main` (§12.2): every job below.
+name: PR Gate
+on:
+  pull_request:
+    branches: [main]
+concurrency: { group: pr-${{ github.event.pull_request.number }}, cancel-in-progress: true }
+permissions: { contents: read }
+
+jobs:
+  harness:
+    name: harness (arch · debt · TDD · traceability · PR title)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: git fetch origin main:main
+      - name: PR title is a Conventional Commit (becomes the squash commit)
+        env: { TITLE: '${{ github.event.pull_request.title }}' }
+        run: node harness/check-commit-msg.mjs --title "$TITLE"
+      - run: node harness/check-architecture.mjs
+      - run: node harness/check-debt.mjs
+      - run: node harness/check-tdd.mjs --ratio
+      - run: node harness/trace-requirements.mjs --check
+      - run: node cms-infra/scripts/check-env-sync.mjs
+
+  lint-type:
+    name: lint + typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir cms-api prisma:generate
+      - run: pnpm -r format:check
+      - run: pnpm -r lint
+      - run: pnpm -r typecheck
+
+  arch:
+    name: architecture + OpenAPI + duplication
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r depcruise
+      - run: pnpm -r dup
+      - run: pnpm --dir cms-api openapi:check
+
+  test-api:
+    name: cms-api unit + e2e + coverage (98%)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir cms-api prisma:generate
+      - run: pnpm --dir cms-api test:cov
+      - uses: actions/upload-artifact@v4
+        with: { name: coverage-api, path: cms-api/coverage }
+
+  test-web:
+    name: cms-web unit + component + coverage (98%) + bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir cms-web test:cov
+      - run: pnpm --dir cms-web build && pnpm --dir cms-web bundle:check
+      - uses: actions/upload-artifact@v4
+        with: { name: coverage-web, path: cms-web/coverage }
+
+  test-integration:
+    name: cms-api integration (Postgres via Testcontainers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir cms-api prisma:generate
+      - run: pnpm --dir cms-api test:integration
+      - name: Migrations match the Prisma schema (no drift)
+        run: pnpm --dir cms-api exec prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url "$SHADOW" --exit-code
+        env: { SHADOW: 'postgresql://postgres:postgres@localhost:5432/shadow' }
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: shadow }
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+
+  mutation:
+    name: mutation testing on changed files (≥ 80%)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir cms-api prisma:generate
+      - uses: actions/cache@v4
+        with: { path: '*/reports/stryker-incremental.json', key: stryker-${{ github.base_ref }} }
+      - run: pnpm --dir cms-api test:mutation:changed
+      - run: pnpm --dir cms-web test:mutation
+
+  security:
+    name: security (secrets · deps · SAST)
+    runs-on: ubuntu-latest
+    permissions: { contents: read, security-events: write }
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}' }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level high
+      - uses: github/codeql-action/init@v3
+        with: { languages: javascript-typescript }
+      - uses: github/codeql-action/analyze@v3
+
+  e2e:
+    name: E2E (Playwright, G-04)
+    needs: [harness, lint-type, arch, test-api, test-web, security]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir cms-api prisma:generate
+      - run: pnpm --dir cms-web exec playwright install --with-deps
+      - run: pnpm --dir cms-web test:e2e
+        env: { CI: 'true' }
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: playwright-report, path: cms-web/playwright-report }

@@ -1,0 +1,62 @@
+# 05-METRICS §11.8 G-07 production deploy (manual approval via the `production`
+# environment) and §11.11 G-10 release gate. Triggered by a SemVer tag v1.2.3.
+name: Release
+on:
+  push:
+    tags: ["v*.*.*"]
+permissions: { contents: write, packages: write, id-token: write }
+
+jobs:
+  release-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version bumped + changelog entry present
+        run: |
+          V="${GITHUB_REF_NAME#v}"
+          grep -q "\"version\": \"$V\"" cms-api/package.json
+          grep -q "\"version\": \"$V\"" cms-web/package.json
+          grep -q "## \[$V\]" CHANGELOG.md
+
+  images:
+    needs: release-checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          {
+            registry: ghcr.io,
+            username: "${{ github.actor }}",
+            password: "${{ secrets.GITHUB_TOKEN }}",
+          }
+      - uses: docker/build-push-action@v6
+        with:
+          {
+            context: cms-api,
+            push: true,
+            tags: "ghcr.io/${{ github.repository_owner }}/cms-api:${{ github.ref_name }}",
+          }
+      - uses: docker/build-push-action@v6
+        with:
+          {
+            context: cms-web,
+            target: dist,
+            push: true,
+            tags: "ghcr.io/${{ github.repository_owner }}/cms-web-dist:${{ github.ref_name }}",
+          }
+      - uses: sigstore/cosign-installer@v3
+      - run: cosign sign --yes ghcr.io/${{ github.repository_owner }}/cms-api:${{ github.ref_name }}
+
+  deploy-production:
+    needs: images
+    runs-on: ubuntu-latest
+    environment: production # required reviewers = Tech Lead (G-07 manual approval)
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: deploy
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: /opt/cms/current/scripts/deploy.sh ${GITHUB_REF_NAME#v}

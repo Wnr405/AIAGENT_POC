@@ -1,0 +1,5 @@
+# G-02 pre-push gate (05-METRICS §11.3)
+pnpm -r typecheck
+pnpm --dir cms-api test:unit
+pnpm --dir cms-web test
+node harness/check-tdd.mjs

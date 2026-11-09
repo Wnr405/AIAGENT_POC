@@ -1,0 +1,43 @@
+# 05-METRICS §11.10 G-09 nightly gate: full mutation run, fresh CVE scan, load test.
+name: Nightly
+on:
+  schedule: [{ cron: "0 19 * * *" }] # 02:00 Asia/Bangkok
+  workflow_dispatch:
+permissions: { contents: read }
+
+jobs:
+  mutation-full:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir cms-api prisma:generate
+      - run: pnpm -r test:mutation
+      - uses: actions/upload-artifact@v4
+        with: { name: mutation-reports, path: "*/reports/mutation" }
+
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level high
+
+  load-test:
+    runs-on: ubuntu-latest
+    if: ${{ vars.STAGING_URL != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: grafana/setup-k6-action@v1
+      - run: k6 run cms-infra/load/public-api.k6.js
+        env:
+          {
+            BASE_URL: "${{ vars.STAGING_URL }}",
+            API_KEY: "${{ secrets.STAGING_SMOKE_API_KEY }}",
+          }

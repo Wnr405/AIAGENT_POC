@@ -1,0 +1,89 @@
+# 07-OPS-ARCH §5.5 — rendered by the nginx image's envsubst (SERVER_NAME).
+upstream cms_api {
+  server cms-api:3000;
+  keepalive 32;
+}
+
+server {
+  listen 80;
+  server_name ${SERVER_NAME};
+  location /.well-known/acme-challenge/ { root /var/www/certbot; }
+  location = /nginx-health { access_log off; return 200 "ok"; }
+  location / { return 301 https://$host$request_uri; }
+}
+
+server {
+  listen 443 ssl;
+  http2 on;
+  server_name ${SERVER_NAME};
+
+  ssl_certificate     /etc/cms/tls/fullchain.pem;
+  ssl_certificate_key /etc/cms/tls/privkey.pem;
+  ssl_protocols TLSv1.2 TLSv1.3;                       # SEC-01
+  ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+  ssl_prefer_server_ciphers off;
+  ssl_session_cache shared:SSL:10m;
+  ssl_session_timeout 1d;
+  ssl_stapling on;
+  ssl_stapling_verify on;
+
+  include /etc/nginx/snippets/security-headers.inc;
+
+  client_max_body_size 25M;
+
+  # Admin SPA (static). Strict CSP; media may come from the object store / CDN.
+  location / {
+    root /usr/share/nginx/html;
+    try_files $uri $uri/ /index.html;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+    include /etc/nginx/snippets/security-headers.inc;
+  }
+  location /assets/ {
+    root /usr/share/nginx/html;
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+    include /etc/nginx/snippets/security-headers.inc;
+  }
+  location = /index.html {
+    root /usr/share/nginx/html;
+    add_header Cache-Control "no-cache";
+    include /etc/nginx/snippets/security-headers.inc;
+  }
+
+  # Login brute-force cushion
+  location = /api/admin/auth/login {
+    limit_req zone=login burst=5 nodelay;
+    proxy_pass http://cms_api;
+    include /etc/nginx/snippets/proxy.inc;
+  }
+
+  # Public API: micro-cached per API key (FR-CONTENT-12: TTL ≤ 30 s keeps unpublish within 60 s)
+  location /api/v1/ {
+    proxy_cache public_api;
+    proxy_cache_key "$request_method$request_uri$http_x_api_key";
+    proxy_cache_valid 200 304 30s;
+    proxy_cache_valid 404 10s;
+    proxy_cache_lock on;
+    proxy_cache_use_stale updating error timeout;
+    add_header X-Cache-Status $upstream_cache_status always;
+    include /etc/nginx/snippets/security-headers.inc;
+    proxy_pass http://cms_api;
+    include /etc/nginx/snippets/proxy.inc;
+  }
+
+  # Never exposed publicly
+  location /api/dev/ { return 404; }
+  location = /metrics { return 404; }
+
+  location /api/ {
+    proxy_pass http://cms_api;
+    include /etc/nginx/snippets/proxy.inc;
+  }
+
+  location = /docs { return 301 /api/docs; }
+
+  location = /healthz {
+    access_log off;
+    proxy_pass http://cms_api/healthz;
+  }
+}

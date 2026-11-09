@@ -1,0 +1,16 @@
+# Staging: same topology, smaller limits, verbose logs, sanitized data (02-SRS §10.3).
+services:
+  cms-api:
+    environment:
+      LOG_LEVEL: debug
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 768m }
+  cms-worker:
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 512m }
+  postgres:
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1g }

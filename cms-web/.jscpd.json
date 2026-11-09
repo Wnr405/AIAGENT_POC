@@ -1,0 +1,6 @@
+{
+  "threshold": 3,
+  "minLines": 10,
+  "reporters": ["console", "json"],
+  "ignore": ["**/*.spec.ts", "**/*.spec.tsx", "**/node_modules/**", "**/dist/**"]
+}

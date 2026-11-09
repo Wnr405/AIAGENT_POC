@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "Prisma.prisma",
+    "eamodio.gitlens",
+    "ms-playwright.playwright",
+    "vitest.explorer",
+    "EditorConfig.EditorConfig",
+    "ms-azuretools.vscode-docker",
+    "humao.rest-client"
+  ]
+}

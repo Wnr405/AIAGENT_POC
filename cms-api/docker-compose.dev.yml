@@ -1,0 +1,41 @@
+# Local dependencies for `pnpm dev` (09-ONBOARDING §7.5). Not used in production.
+name: cms-dev
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: cms-postgres
+    environment:
+      POSTGRES_USER: cms
+      POSTGRES_PASSWORD: cms-dev-password
+      POSTGRES_DB: cms
+    ports: ['5432:5432']
+    volumes: [cms-pg:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cms -d cms']
+      interval: 5s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--requirepass', 'cms-dev-redis']
+    ports: ['6379:6379']
+  minio:
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: cms-dev-minio
+      MINIO_ROOT_PASSWORD: cms-dev-minio-secret
+    ports: ['9000:9000', '9001:9001']
+    volumes: [cms-minio:/data]
+  minio-init:
+    image: minio/mc:RELEASE.2024-11-21T17-21-54Z
+    depends_on: [minio]
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 cms-dev-minio cms-dev-minio-secret; do sleep 1; done;
+      mc mb --ignore-existing local/cms-media;
+      mc anonymous set none local/cms-media;
+      mc admin config set local api cors_allow_origin=http://localhost:5173 || true;
+      "
+volumes:
+  cms-pg:
+  cms-minio:

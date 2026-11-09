@@ -1,0 +1,222 @@
+// 02-SRS §6 data model. Snake_case in the database, camelCase in code.
+// Migrations are forward-only and backward compatible (07-OPS-ARCH §12).
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  editor
+  author
+}
+
+enum UserStatus {
+  invited
+  active
+  deactivated
+}
+
+enum ContentType {
+  article
+  page
+}
+
+enum ContentStatus {
+  draft
+  in_review
+  published
+  unpublished
+  archived
+}
+
+enum OneTimeTokenPurpose {
+  invite
+  password_reset
+}
+
+model User {
+  id                    String     @id @db.Uuid
+  email                 String     @unique
+  name                  String
+  passwordHash          String?    @map("password_hash")
+  role                  UserRole
+  status                UserStatus
+  failedLoginCount      Int        @default(0) @map("failed_login_count")
+  failedWindowStartedAt DateTime?  @map("failed_window_started_at") @db.Timestamptz(3)
+  lockedUntil           DateTime?  @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt           DateTime?  @map("last_login_at") @db.Timestamptz(3)
+  createdAt             DateTime   @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime   @map("updated_at") @db.Timestamptz(3)
+
+  contents      Content[]
+  media         MediaItem[]
+  refreshTokens RefreshToken[]
+  oneTimeTokens OneTimeToken[]
+  apiKeys       ApiKey[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id           String    @id @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  familyId     String    @map("family_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash")
+  issuedAt     DateTime  @map("issued_at") @db.Timestamptz(3)
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(3)
+  replacedById String?   @map("replaced_by_id") @db.Uuid
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model OneTimeToken {
+  id        String              @id @db.Uuid
+  userId    String              @map("user_id") @db.Uuid
+  purpose   OneTimeTokenPurpose
+  tokenHash String              @unique @map("token_hash")
+  expiresAt DateTime            @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime?           @map("used_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, purpose])
+  @@map("one_time_tokens")
+}
+
+model ApiKey {
+  id         String    @id @db.Uuid
+  name       String
+  keyPrefix  String    @map("key_prefix")
+  keyHash    String    @unique @map("key_hash")
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz(3)
+  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdBy  String    @map("created_by") @db.Uuid
+  createdAt  DateTime  @map("created_at") @db.Timestamptz(3)
+
+  creator User @relation(fields: [createdBy], references: [id])
+
+  @@map("api_keys")
+}
+
+model Content {
+  id              String        @id @db.Uuid
+  type            ContentType
+  title           String        @db.VarChar(200)
+  slug            String        @db.VarChar(120)
+  body            Json
+  status          ContentStatus
+  authorId        String        @map("author_id") @db.Uuid
+  featuredImageId String?       @map("featured_image_id") @db.Uuid
+  socialImageId   String?       @map("social_image_id") @db.Uuid
+  seoTitle        String?       @map("seo_title") @db.VarChar(70)
+  seoDescription  String?       @map("seo_description") @db.VarChar(160)
+  // Denormalised FR-SEO-02 defaults so the public read path needs no body parsing.
+  effectiveSeoTitle       String @map("effective_seo_title") @db.VarChar(70)
+  effectiveSeoDescription String @map("effective_seo_description") @db.VarChar(161)
+  tags            String[]
+  category        String?       @db.VarChar(60)
+  parentId        String?       @map("parent_id") @db.Uuid
+  scheduledAt     DateTime?     @map("scheduled_at") @db.Timestamptz(3)
+  publishedAt     DateTime?     @map("published_at") @db.Timestamptz(3)
+  deletedAt       DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  createdAt       DateTime      @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime      @map("updated_at") @db.Timestamptz(3)
+
+  author        User              @relation(fields: [authorId], references: [id])
+  featuredImage MediaItem?        @relation("FeaturedImage", fields: [featuredImageId], references: [id])
+  socialImage   MediaItem?        @relation("SocialImage", fields: [socialImageId], references: [id])
+  parent        Content?          @relation("PageParent", fields: [parentId], references: [id])
+  children      Content[]         @relation("PageParent")
+  versions      ContentVersion[]
+  mediaRefs     ContentMediaRef[]
+
+  @@unique([type, slug])
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([authorId, status])
+  @@index([scheduledAt])
+  @@index([tags], type: Gin)
+  @@map("contents")
+}
+
+model ContentVersion {
+  id        String   @id @db.Uuid
+  contentId String   @map("content_id") @db.Uuid
+  versionNo Int      @map("version_no")
+  snapshot  Json
+  editorId  String?  @map("editor_id") @db.Uuid
+  createdAt DateTime @map("created_at") @db.Timestamptz(3)
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([contentId, versionNo])
+  @@map("content_versions")
+}
+
+/// Embedded media usages (FR-MEDIA-07). Rewritten on every content save.
+model ContentMediaRef {
+  contentId String @map("content_id") @db.Uuid
+  mediaId   String @map("media_id") @db.Uuid
+
+  content Content   @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  media   MediaItem @relation(fields: [mediaId], references: [id])
+
+  @@id([contentId, mediaId])
+  @@index([mediaId])
+  @@map("content_media_refs")
+}
+
+model MediaItem {
+  id         String    @id @db.Uuid
+  storageKey String    @unique @map("storage_key")
+  filename   String    @db.VarChar(255)
+  mimeType   String    @map("mime_type")
+  kind       String
+  sizeBytes  BigInt    @map("size_bytes")
+  width      Int?
+  height     Int?
+  altText    String?   @map("alt_text") @db.VarChar(500)
+  caption    String?   @db.VarChar(1000)
+  variants   Json      @default("{}")
+  uploadedBy String    @map("uploaded_by") @db.Uuid
+  createdAt  DateTime  @map("created_at") @db.Timestamptz(3)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  uploader       User              @relation(fields: [uploadedBy], references: [id])
+  featuredIn     Content[]         @relation("FeaturedImage")
+  socialImageIn  Content[]         @relation("SocialImage")
+  contentRefs    ContentMediaRef[]
+
+  @@index([uploadedBy])
+  @@index([createdAt(sort: Desc)])
+  @@map("media_items")
+}
+
+/// Append-only (FR-AUDIT-03): UPDATE/DELETE are blocked by a trigger and revoked from the app role.
+model AuditEvent {
+  id         String   @id @db.Uuid
+  occurredAt DateTime @map("occurred_at") @db.Timestamptz(3)
+  actorId    String?  @map("actor_id") @db.Uuid
+  actorIp    String?  @map("actor_ip") @db.VarChar(45)
+  action     String   @db.VarChar(80)
+  targetType String   @map("target_type") @db.VarChar(40)
+  targetId   String?  @map("target_id") @db.Uuid
+  summary    Json
+
+  @@index([occurredAt(sort: Desc)])
+  @@index([actorId, occurredAt])
+  @@index([action, occurredAt])
+  @@index([targetType, targetId])
+  @@map("audit_events")
+}

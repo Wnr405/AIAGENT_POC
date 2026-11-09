@@ -1,0 +1,8 @@
+# 08-GIT-WORKFLOW §9 — reviewers per area. Replace the handles with your team's.
+*                         @org/cms-maintainers
+/cms-api/src/modules/auth/ @org/cms-security
+/cms-infra/               @org/cms-devops
+/harness/                 @org/cms-tech-lead
+/.claude/                 @org/cms-tech-lead
+/.github/                 @org/cms-tech-lead
+/0*.md                    @org/cms-product-owner

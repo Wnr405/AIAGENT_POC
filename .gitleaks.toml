@@ -1,0 +1,14 @@
+# SEC-09: secret scanning (pre-commit + CI). Extends the default ruleset.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "cms-api-key"
+description = "CMS public API key"
+regex = '''cmsk_[A-Za-z0-9_-]{30,}'''
+tags = ["key", "cms"]
+
+[allowlist]
+description = "Documented placeholders and test fixtures"
+paths = ['''\.env\.example$''', '''(^|/)test/''', '''\.spec\.tsx?$''']
+regexes = ['''__CHANGE_ME[A-Z0-9_]*__''', '''dev-only-0{64}''', '''cms-dev-[a-z-]+''']

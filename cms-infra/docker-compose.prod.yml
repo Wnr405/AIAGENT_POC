@@ -1,0 +1,50 @@
+# 07-OPS-ARCH §9.3 — production resource limits, log rotation, tuned Postgres.
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "50m", max-file: "5", tag: "{{.Name}}/{{.ID}}" }
+
+services:
+  cms-api:
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 1g }
+        reservations: { cpus: "0.5", memory: 512m }
+    logging: *logging
+  cms-worker:
+    deploy:
+      resources:
+        limits: { cpus: "1.5", memory: 768m }
+    logging: *logging
+  postgres:
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2g }
+        reservations: { cpus: "1.0", memory: 1g }
+    command:
+      - postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=1500MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - max_connections=100
+      - -c
+      - log_min_duration_statement=1000
+    logging: *logging
+  redis:
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 1.2g }
+  minio:
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1g }
+  nginx:
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256m }
+    logging: *logging

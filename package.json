@@ -1,0 +1,45 @@
+{
+  "name": "cms",
+  "private": true,
+  "description": "CMS MVP monorepo — cms-api (hexagonal NestJS), cms-web (reactive React/MUI), cms-infra (Docker Compose) + AI-agent harness",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.11 <23",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "gate": "node harness/gate.mjs full",
+    "gate:quick": "node harness/gate.mjs quick",
+    "trace": "node harness/trace-requirements.mjs --write",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:cov": "pnpm -r test:cov",
+    "format": "pnpm -r format"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11",
+    "eslint": "^9.16.0",
+    "prettier": "^3.4.2"
+  },
+  "lint-staged": {
+    "cms-api/**/*.ts": [
+      "prettier --write",
+      "eslint --max-warnings 0 --config cms-api/eslint.config.mjs"
+    ],
+    "cms-web/**/*.{ts,tsx}": [
+      "prettier --write",
+      "eslint --max-warnings 0 --config cms-web/eslint.config.js"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "pnpm": {
+    "neverBuiltDependencies": [
+      "cpu-features"
+    ]
+  }
+}

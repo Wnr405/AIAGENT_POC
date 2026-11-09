@@ -1,0 +1,35 @@
+# 07-OPS-ARCH §15.3 alert rules. Routing: P1 → pager, P2 → Slack+email, P3 → Slack.
+groups:
+  - name: cms
+    rules:
+      - alert: APIDown
+        expr: up{job="cms-api"} == 0
+        for: 2m
+        labels: { severity: P1, runbook: runbooks/api-down.md }
+      - alert: HighErrorRate
+        expr: sum(rate(cms_http_requests_total{status=~"5.."}[5m])) / sum(rate(cms_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels: { severity: P1, runbook: runbooks/high-error-rate.md }
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum by (le) (rate(cms_http_request_duration_seconds_bucket[5m]))) > 2
+        for: 10m
+        labels: { severity: P2 }
+      - alert: DiskAlmostFull
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/var/lib/cms"} / node_filesystem_size_bytes{mountpoint="/var/lib/cms"}) > 0.85
+        labels: { severity: P1, runbook: runbooks/disk-full.md }
+      - alert: DiskWarn
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/var/lib/cms"} / node_filesystem_size_bytes{mountpoint="/var/lib/cms"}) > 0.75
+        labels: { severity: P3 }
+      - alert: BackupMissing
+        expr: time() - cms_backup_last_success_timestamp_seconds > 5400
+        labels: { severity: P1, runbook: runbooks/backup-failed.md }
+      - alert: LoginFailureSpike
+        expr: sum(rate(cms_http_requests_total{route="/api/admin/auth/login",status="401"}[1m])) * 60 > 100
+        for: 5m
+        labels: { severity: P1, runbook: runbooks/login-spike.md }
+      - alert: ContainerRestartLoop
+        expr: increase(container_restart_count[10m]) > 3
+        labels: { severity: P1, runbook: runbooks/api-down.md }
+      - alert: WorkerJobFailures
+        expr: increase(cms_worker_job_runs_total{outcome="error"}[10m]) > 5
+        labels: { severity: P2 }
