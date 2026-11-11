@@ -30,5 +30,6 @@ Follow this pipeline and do not skip steps:
    - **Next** — the single next step for whoever picks this up
 
    Then add a dated one-line entry under `## Log`, run `node harness/trace-requirements.mjs --write`,
-   and commit both as `docs(progress): <IDs> <status>`. The feature list is `cms-docs/TRACEABILITY.md` —
+   and commit both as `docs(<scope>): progress <IDs> <status>` (the feature's module scope — the
+   commit-msg hook has no `progress` scope). The feature list is `cms-docs/TRACEABILITY.md` —
    do not create a separate feature list.
