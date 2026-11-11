@@ -22,3 +22,12 @@ test('G-01: a missing progress file yields a hint instead of a crash', () => {
 test('G-01: Windows line endings are normalised', () => {
   assert.equal(progressHead(`# Progress\r\n- Status: green\r\n${PROGRESS_HEAD_END}\r\n`), '# Progress\n- Status: green');
 });
+
+test('G-01: an empty head (marker on the first line, or an empty file) yields a hint, not a blank section', () => {
+  assert.match(progressHead(`${PROGRESS_HEAD_END}\n## Log`), /head is empty/);
+  assert.match(progressHead(''), /head is empty/);
+});
+
+test('G-01: only the first end-of-head marker counts', () => {
+  assert.equal(progressHead(`- a\n${PROGRESS_HEAD_END}\n- b\n${PROGRESS_HEAD_END}`), '- a');
+});

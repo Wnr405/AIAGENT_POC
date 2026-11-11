@@ -9,5 +9,6 @@ export function progressHead(text) {
   const normalised = text.replace(/\r\n/g, '\n');
   const end = normalised.indexOf(PROGRESS_HEAD_END);
   const head = end >= 0 ? normalised.slice(0, end) : normalised.split('\n').slice(0, FALLBACK_LINES).join('\n');
-  return head.trimEnd();
+  const trimmed = head.trimEnd();
+  return trimmed === '' ? `(${PROGRESS_FILE} head is empty — fill it in per /feature step 8)` : trimmed;
 }
