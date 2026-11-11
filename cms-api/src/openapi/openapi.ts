@@ -92,8 +92,7 @@ type Security = { [name: string]: string[] }[];
 type Add = (tag: string, security: Security | undefined, spec: Spec) => void;
 const id = z.object({ id: z.string().uuid() });
 
-function registerAdminRoutes(add: Add, admin: Security): void {
-  // ── Auth ──────────────────────────────────────────────────────────────
+function registerAuthRoutes(add: Add, admin: Security): void {
   add('Auth', undefined, {
     method: 'post',
     path: '/api/admin/auth/login',
@@ -136,8 +135,9 @@ function registerAdminRoutes(add: Add, admin: Security): void {
     request: { body: json(ChangePasswordRequest) },
     responses: { 204: { description: 'Changed; all sessions revoked' } },
   });
+}
 
-  // ── Users ─────────────────────────────────────────────────────────────
+function registerUsersRoutes(add: Add, admin: Security): void {
   add('Users', admin, { method: 'get', path: '/api/admin/users', request: { query: ListUsersQuery } });
   add('Users', admin, { method: 'post', path: '/api/admin/users', request: { body: json(InviteUserRequest) } });
   add('Users', admin, {
@@ -152,8 +152,9 @@ function registerAdminRoutes(add: Add, admin: Security): void {
     request: { params: id },
     responses: { 202: { description: 'Email sent' } },
   });
+}
 
-  // ── Content ───────────────────────────────────────────────────────────
+function registerContentRoutes(add: Add, admin: Security): void {
   add('Content', admin, { method: 'get', path: '/api/admin/content', request: { query: ListContentQuery } });
   add('Content', admin, { method: 'post', path: '/api/admin/content', request: { body: json(CreateContentRequest) } });
   add('Content', admin, { method: 'get', path: '/api/admin/content/stats' });
@@ -274,8 +275,11 @@ export function buildOpenApiDocument(version: string): ReturnType<OpenApiGenerat
   const add: Add = (tag, security, spec) => {
     r.registerPath({ tags: [tag], security, ...spec, responses: { 200: ok(), ...errors, ...spec.responses } });
   };
-  registerAdminRoutes(add, [{ [bearer.name]: [] }]);
-  registerMediaAuditKeys(add, [{ [bearer.name]: [] }]);
+  const admin: Security = [{ [bearer.name]: [] }];
+  registerAuthRoutes(add, admin);
+  registerUsersRoutes(add, admin);
+  registerContentRoutes(add, admin);
+  registerMediaAuditKeys(add, admin);
   registerPublicRoutes(add, [{ [apiKey.name]: [] }]);
 
   return new OpenApiGeneratorV31(r.definitions).generateDocument({
