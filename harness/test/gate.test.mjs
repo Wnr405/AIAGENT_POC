@@ -25,3 +25,10 @@ test('G-03: env sync reads keys from the 2-space-indented env schema', () => {
   const src = "const baseSchema = z.object({\n  NODE_ENV: z.enum(['a']),\n\n  /** doc */\n  HTTP_PORT: z.coerce.number(),\n    NESTED_KEY: z.string(),\n  lower: z.string(),\n});";
   assert.deepEqual(schemaKeysOf(src), ['NODE_ENV', 'HTTP_PORT', 'NESTED_KEY']);
 });
+
+test('G-02: only pnpm runs through a shell on Windows, so a node path with spaces still launches', async () => {
+  const { needsShell } = await import('../gate-verdict.mjs');
+  assert.equal(needsShell(['C:\Program Files\nodejs\node.exe', 'harness/x.mjs'], 'win32'), false);
+  assert.equal(needsShell(['pnpm', 'lint'], 'win32'), true);
+  assert.equal(needsShell(['pnpm', 'lint'], 'linux'), false);
+});

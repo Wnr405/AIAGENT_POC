@@ -18,6 +18,7 @@ You are working in a monorepo that implements the CMS specified by the documents
 | Setup, repo tour                                                    | `09-ONBOARDING.md` + `README.md`                      |
 | Decisions already taken                                             | `cms-docs/adr/`                                       |
 | Which requirement is tested where                                   | `cms-docs/TRACEABILITY.md` (generated)                |
+| Where the last session stopped, evidence, next step                 | `cms-docs/progress.md` (head shown at session start)  |
 
 If a request conflicts with these documents, stop and say so. Scope changes need human change control (RK-01).
 

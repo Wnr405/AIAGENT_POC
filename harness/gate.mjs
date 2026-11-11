@@ -5,9 +5,9 @@
 //   node harness/gate.mjs full    → G-02/G-03 locally (all checks; tool steps need `pnpm install`)
 //   add --allow-skip to tolerate steps skipped because dependencies are missing (they fail by default)
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { gateExitCode, SKIPPED_NO_DEPS } from './gate-verdict.mjs';
+import { gateExitCode, needsShell, SKIPPED_NO_DEPS } from './gate-verdict.mjs';
 import { changedFiles, ROOT } from './lib.mjs';
 
 const mode = process.argv[2] ?? 'quick';
@@ -15,6 +15,10 @@ const allowSkip = process.argv.includes('--allow-skip');
 const node = process.execPath;
 const changedTs = changedFiles().filter((f) => /^cms-(api|web)\/.*\.(ts|tsx)$/.test(f) && existsSync(join(ROOT, f)));
 const hasDeps = (pkg) => existsSync(join(ROOT, pkg, 'node_modules', '.bin'));
+// Explicit file list: `node --test <dir|glob>` is not portable across Node 20/22 on Windows.
+const harnessTests = readdirSync(join(ROOT, 'harness', 'test'))
+  .filter((f) => f.endsWith('.test.mjs'))
+  .map((f) => `harness/test/${f}`);
 
 /** @type {{ name: string; cmd: string[]; cwd?: string; when?: boolean }[]} */
 const steps =
@@ -24,7 +28,7 @@ const steps =
         { name: 'tech debt (changed)', cmd: [node, 'harness/check-debt.mjs', ...changedTs], when: changedTs.length > 0 },
       ]
     : [
-        { name: 'harness self-tests', cmd: [node, '--test', 'harness/test/gate.test.mjs'] },
+        { name: 'harness self-tests', cmd: [node, '--test', ...harnessTests] },
         { name: 'architecture', cmd: [node, 'harness/check-architecture.mjs'] },
         { name: 'tech debt', cmd: [node, 'harness/check-debt.mjs'] },
         { name: 'TDD discipline', cmd: [node, 'harness/check-tdd.mjs', '--ratio'] },
@@ -46,7 +50,7 @@ for (const s of steps) {
     results.push([s.name, s.cmd[0] === 'pnpm' ? SKIPPED_NO_DEPS : 'SKIPPED (nothing changed)']);
     continue;
   }
-  const r = spawnSync(s.cmd[0], s.cmd.slice(1), { cwd: join(ROOT, s.cwd ?? ''), stdio: 'inherit', shell: process.platform === 'win32' });
+  const r = spawnSync(s.cmd[0], s.cmd.slice(1), { cwd: join(ROOT, s.cwd ?? ''), stdio: 'inherit', shell: needsShell(s.cmd, process.platform) });
   results.push([s.name, r.status === 0 ? 'PASS' : 'FAIL']);
 }
 

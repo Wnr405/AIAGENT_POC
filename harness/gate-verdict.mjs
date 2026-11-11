@@ -10,3 +10,10 @@ export function gateExitCode(results, { allowSkip = false } = {}) {
   const failed = results.some(([, s]) => s === 'FAIL' || (!allowSkip && s === SKIPPED_NO_DEPS));
   return failed ? 1 : 0;
 }
+
+/**
+ * pnpm is a `.cmd` shim on Windows and needs a shell; node (process.execPath) must not go through one,
+ * because cmd.exe splits `C:\Program Files\nodejs\node.exe` at the space.
+ * @param {string[]} cmd @param {NodeJS.Platform} platform
+ */
+export const needsShell = (cmd, platform) => platform === 'win32' && cmd[0] === 'pnpm';
