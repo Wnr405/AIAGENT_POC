@@ -1,6 +1,7 @@
 // CI: every key in cms-infra/.env.example must be known to cms-api's env schema and vice versa
 // (except infra-only keys). Prevents config drift (07-OPS-ARCH §7.4).
 import { readFileSync } from 'node:fs';
+import { schemaKeysOf } from './env-keys.mjs';
 
 const INFRA_ONLY = new Set([
   'CMS_API_IMAGE', 'SERVER_NAME', 'POSTGRES_HOST', 'POSTGRES_PORT', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB',
@@ -11,7 +12,7 @@ const INFRA_ONLY = new Set([
 const env = readFileSync(new URL('../.env.example', import.meta.url), 'utf8')
   .split('\n').map((l) => l.match(/^([A-Z0-9_]+)=/)?.[1]).filter(Boolean);
 const schema = readFileSync(new URL('../../cms-api/src/config/env.schema.ts', import.meta.url), 'utf8');
-const schemaKeys = [...schema.matchAll(/^\s{4}([A-Z0-9_]+):/gm)].map((m) => m[1]);
+const schemaKeys = schemaKeysOf(schema);
 const missingInSchema = env.filter((k) => !INFRA_ONLY.has(k) && !schemaKeys.includes(k));
 const missingInEnv = schemaKeys.filter((k) => !env.includes(k) && !['PERSISTENCE', 'ROLE'].includes(k));
 if (missingInSchema.length || missingInEnv.length) {

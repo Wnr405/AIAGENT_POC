@@ -3,12 +3,15 @@
 // same verdict before pushing.
 //   node harness/gate.mjs quick   → G-01 pre-commit (< 10 s, changed files only, zero deps)
 //   node harness/gate.mjs full    → G-02/G-03 locally (all checks; tool steps need `pnpm install`)
+//   add --allow-skip to tolerate steps skipped because dependencies are missing (they fail by default)
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { gateExitCode, SKIPPED_NO_DEPS } from './gate-verdict.mjs';
 import { changedFiles, ROOT } from './lib.mjs';
 
 const mode = process.argv[2] ?? 'quick';
+const allowSkip = process.argv.includes('--allow-skip');
 const node = process.execPath;
 const changedTs = changedFiles().filter((f) => /^cms-(api|web)\/.*\.(ts|tsx)$/.test(f) && existsSync(join(ROOT, f)));
 const hasDeps = (pkg) => existsSync(join(ROOT, pkg, 'node_modules', '.bin'));
@@ -21,6 +24,7 @@ const steps =
         { name: 'tech debt (changed)', cmd: [node, 'harness/check-debt.mjs', ...changedTs], when: changedTs.length > 0 },
       ]
     : [
+        { name: 'harness self-tests', cmd: [node, '--test', 'harness/test/gate.test.mjs'] },
         { name: 'architecture', cmd: [node, 'harness/check-architecture.mjs'] },
         { name: 'tech debt', cmd: [node, 'harness/check-debt.mjs'] },
         { name: 'TDD discipline', cmd: [node, 'harness/check-tdd.mjs', '--ratio'] },
@@ -39,7 +43,7 @@ const steps =
 const results = [];
 for (const s of steps) {
   if (s.when === false) {
-    results.push([s.name, s.cmd[0] === 'pnpm' ? 'SKIPPED (run pnpm install)' : 'SKIPPED (nothing changed)']);
+    results.push([s.name, s.cmd[0] === 'pnpm' ? SKIPPED_NO_DEPS : 'SKIPPED (nothing changed)']);
     continue;
   }
   const r = spawnSync(s.cmd[0], s.cmd.slice(1), { cwd: join(ROOT, s.cwd ?? ''), stdio: 'inherit', shell: process.platform === 'win32' });
@@ -48,4 +52,8 @@ for (const s of steps) {
 
 console.log(`\n── ${mode === 'quick' ? 'G-01 pre-commit' : 'G-02/G-03 local'} gate ──`);
 for (const [name, status] of results) console.log(`${status === 'PASS' ? '✓' : status === 'FAIL' ? '✗' : '·'} ${name.padEnd(36)} ${status}`);
-process.exit(results.some(([, s]) => s === 'FAIL') ? 1 : 0);
+const exitCode = gateExitCode(results, { allowSkip });
+if (exitCode !== 0 && !allowSkip && results.some(([, s]) => s === SKIPPED_NO_DEPS)) {
+  console.error('\nSteps were skipped because dependencies are missing: run `pnpm install` (or pass --allow-skip).');
+}
+process.exit(exitCode);
