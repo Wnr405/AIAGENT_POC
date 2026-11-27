@@ -13,7 +13,7 @@ permissions: { contents: read }
 
 jobs:
   harness:
-    name: harness (arch · debt · TDD · traceability · PR title)
+    name: harness (arch · debt · TDD · traceability · PR title · commits)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +24,11 @@ jobs:
       - name: PR title is a Conventional Commit (becomes the squash commit)
         env: { TITLE: "${{ github.event.pull_request.title }}" }
         run: node harness/check-commit-msg.mjs --title "$TITLE"
-      - name: harness self-tests (gate verdict, env-key parsing, progress head)
+      # The local commit-msg hook only runs where `pnpm install` installed Husky (and not with --no-verify);
+      # check every commit in the PR here too. The PR merge commit itself is exempt (see validate()).
+      - name: every commit in the PR is a Conventional Commit
+        run: node harness/check-commit-msg.mjs --range main..HEAD
+      - name: harness self-tests (gate verdict, env-key parsing, progress head, commit messages)
         run: node --test harness/test/*.test.mjs
       - run: node harness/check-architecture.mjs
       - run: node harness/check-debt.mjs
