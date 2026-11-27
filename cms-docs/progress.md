@@ -5,7 +5,7 @@
 > Feature list and per-requirement status: [`TRACEABILITY.md`](TRACEABILITY.md).
 
 - **Current:** harness hardening + FR-PUBAPI-07 OpenAPI fixes · branch `feature/harness-gate-strict-skip`
-- **Status:** ready for review — `/review` and the external review (main @ `e3ee801`) addressed; branch pushed up to `915186e`, `4c4fdfc` not pushed; draft PR opened by the user
+- **Status:** ready for review — `/review` and the external review (main @ `e3ee801`) addressed; branch pushed up to `915186e`, `4c4fdfc` + this commit not pushed; draft PR left to the user to open (not confirmed here)
 - **Evidence:** `node harness/gate.mjs full` on 2026-11-27 (no `--allow-skip`) → exit 0, 17/17 PASS; harness self-tests 20/20
   - Commits: `4c4fdfc` ci(harness) check every PR commit message · `3ef9e4c` ci harness self-tests · `d21bc0e` fix(harness) regex + tests · `2b2906f` refactor(api) OpenAPI split ·
     `d8ef94d` fix(api) openapi.json · `c4355d3` feat(harness) progress state · `4388b10` docs spec 01–09 · `5b7cf56` fix(harness) skip = fail
