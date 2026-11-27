@@ -83,7 +83,7 @@
     "dependency-cruiser": "^16.8.0",
     "eslint": "^9.16.0",
     "eslint-plugin-sonarjs": "^3.0.1",
-    "jscpd": "^4.0.5",
+    "jscpd": "4.2.4",
     "prettier": "^3.4.2",
     "supertest": "^7.0.0",
     "testcontainers": "^10.16.0",
