@@ -2,7 +2,7 @@ import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
 
 /**
- * 05-METRICS §3: coverage gates. Two in-process projects (vitest.workspace.ts):
+ * 05-METRICS §3: coverage gates. Two in-process projects (`test.projects` below):
  *  - unit: domain + application + in-memory adapters (fast, no I/O)
  *  - e2e:  the full Nest HTTP pipeline over in-memory adapters (supertest)
  * Driven adapters that need real infrastructure (Prisma, Redis, S3, sharp,
@@ -16,6 +16,10 @@ export default defineConfig({
     environment: 'node',
     env: { TZ: 'UTC' },
     restoreMocks: true,
+    projects: [
+      { extends: true, test: { name: 'unit', include: ['src/**/*.spec.ts'] } },
+      { extends: true, test: { name: 'e2e', include: ['test/e2e/**/*.e2e.spec.ts'], testTimeout: 20_000 } },
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'json-summary', 'lcov', 'cobertura'],
