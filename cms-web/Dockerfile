@@ -6,8 +6,9 @@
 FROM node:20-bookworm-slim AS build
 WORKDIR /app
 RUN corepack enable
-ENV HUSKY=0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+# The root `prepare` script installs git hooks (husky): meaningless in an image, and husky is not installed here.
+RUN npm pkg delete scripts.prepare
 COPY cms-api/package.json cms-api/
 COPY cms-web/package.json cms-web/
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \

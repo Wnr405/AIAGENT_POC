@@ -5,8 +5,10 @@
 FROM node:20-bookworm-slim AS base
 WORKDIR /app
 RUN corepack enable
-ENV HUSKY=0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+# The root `prepare` script installs git hooks (husky, a root devDependency): meaningless in an image and
+# absent from a --prod install, where it would fail the build.
+RUN npm pkg delete scripts.prepare
 COPY cms-api/package.json cms-api/
 COPY cms-web/package.json cms-web/
 
@@ -16,26 +18,26 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 COPY cms-api/tsconfig.json cms-api/tsconfig.build.json cms-api/
 COPY cms-api/prisma cms-api/prisma
 COPY cms-api/src cms-api/src
-RUN pnpm --dir cms-api prisma generate && pnpm --dir cms-api build
+RUN pnpm --dir cms-api prisma:generate && pnpm --dir cms-api build
 
-# Production dependencies only, hoisted into one flat /app/node_modules so the runtime keeps WORKDIR /app.
-# `prisma` is a runtime dependency (dist/scripts/migrate.js runs `prisma migrate deploy`).
+# Production dependencies only. `prisma` is a runtime dependency: dist/scripts/migrate.js runs
+# `prisma migrate deploy`. Hoisted = real directories, no symlinks into a virtual store.
 FROM base AS prod-deps
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prod --filter @cms/api --config.node-linker=hoisted
 COPY cms-api/prisma cms-api/prisma
-RUN pnpm --dir cms-api exec prisma generate \
-    && if [ -n "$(ls -A cms-api/node_modules 2>/dev/null | grep -v '^\.bin$')" ]; then \
-         echo "cms-api/node_modules has unhoisted packages; the runtime only copies /app/node_modules" >&2; exit 1; \
-       fi
+RUN pnpm --dir cms-api prisma:generate && mkdir -p cms-api/node_modules
 
 FROM node:20-bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends wget openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 1001 nodejs && useradd --uid 1001 --gid nodejs --shell /bin/false --create-home nodejs
-WORKDIR /app
+# Same layout as the workspace: most packages are hoisted to /app/node_modules, but a few versions conflict
+# and stay in /app/cms-api/node_modules, which Node must resolve first.
+WORKDIR /app/cms-api
 ENV NODE_ENV=production
-COPY --from=prod-deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=prod-deps --chown=nodejs:nodejs /app/node_modules /app/node_modules
+COPY --from=prod-deps --chown=nodejs:nodejs /app/cms-api/node_modules ./node_modules
 COPY --from=build --chown=nodejs:nodejs /app/cms-api/dist ./dist
 COPY --from=build --chown=nodejs:nodejs /app/cms-api/prisma ./prisma
 COPY --from=build --chown=nodejs:nodejs /app/cms-api/package.json ./
