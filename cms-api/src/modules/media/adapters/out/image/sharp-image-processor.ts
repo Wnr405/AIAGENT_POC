@@ -5,7 +5,7 @@ import type { ImageProcessor } from '../../../application/ports/out/media-ports'
 export class SharpImageProcessor implements ImageProcessor {
   async probe(data: Uint8Array): Promise<{ width: number; height: number }> {
     const meta = await sharp(data, { failOn: 'error' }).metadata();
-    return { width: meta.width ?? 0, height: meta.height ?? 0 };
+    return { width: meta.width, height: meta.height };
   }
 
   async resize(data: Uint8Array, maxWidth: number): Promise<{ data: Uint8Array; width: number; height: number }> {
