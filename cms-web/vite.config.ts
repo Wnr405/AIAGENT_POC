@@ -8,7 +8,9 @@ export default defineConfig({
   server: {
     port: 5173,
     // Same-origin in dev so the SameSite=Strict refresh cookie works (prod: nginx serves both).
-    proxy: { '/api': { target: process.env.VITE_DEV_API_TARGET ?? 'http://localhost:3000', changeOrigin: false } },
+    // '/api/' with the slash, as nginx's `location /api/`: Vite matches proxy keys by prefix, so '/api'
+    // also sent the SPA route /api-keys to the API (a full load of that page returned "Cannot GET").
+    proxy: { '/api/': { target: process.env.VITE_DEV_API_TARGET ?? 'http://localhost:3000', changeOrigin: false } },
   },
   build: {
     sourcemap: true,
