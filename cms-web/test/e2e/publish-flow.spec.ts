@@ -6,16 +6,21 @@ import { expect, test } from '@playwright/test';
  * (see playwright.config.ts webServer) — no Docker needed.
  */
 test('editor creates and publishes an article', async ({ page, request }) => {
+  // The privacy notice is a modal Dialog that can render a moment after sign-in; while open it hides the
+  // rest of the page from role queries. Dismiss it whenever it appears instead of racing a one-shot check.
+  await page.addLocatorHandler(page.getByRole('button', { name: 'I understand' }), async (accept) => {
+    await accept.click();
+  });
+
   await page.goto('/login');
   await page.getByLabel('Email').fill('admin@example.com');
   await page.getByLabel('Password').fill('dev-password-123');
   await page.getByRole('button', { name: 'Sign in' }).click();
-  const privacy = page.getByRole('button', { name: 'I understand' });
-  if (await privacy.isVisible()) await privacy.click();
 
   await page.getByRole('link', { name: 'Articles' }).click();
   await page.getByRole('button', { name: 'New article' }).click();
-  await page.getByRole('textbox', { name: 'Title' }).fill('E2E Launch');
+  // exact: a substring match also hits the SEO "Meta title" field.
+  await page.getByRole('textbox', { name: 'Title', exact: true }).fill('E2E Launch');
   await page.getByRole('textbox', { name: 'Body' }).fill('Playwright wrote this.');
   await page.getByRole('button', { name: 'Save draft' }).click();
   await expect(page).toHaveURL(/\/content\/articles\/[0-9a-f-]{36}$/);
