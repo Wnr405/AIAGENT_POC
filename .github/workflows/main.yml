@@ -72,9 +72,25 @@ jobs:
 
   deploy-staging:
     needs: images
+    # Opt-in until a staging VM exists: set the repository variable STAGING_DEPLOY_ENABLED=true together with
+    # the staging environment secrets STAGING_HOST and STAGING_SSH_KEY. Until then the job shows as SKIPPED,
+    # never as a passed G-06 (05-METRICS §11.7) — a skipped staging deploy is not a successful one.
+    if: vars.STAGING_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment: staging
     steps:
+      - name: Staging secrets present
+        env:
+          HOST: ${{ secrets.STAGING_HOST }}
+          KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          missing=""
+          [ -n "$HOST" ] || missing="$missing STAGING_HOST"
+          [ -n "$KEY" ] || missing="$missing STAGING_SSH_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::STAGING_DEPLOY_ENABLED is true but the staging environment lacks:$missing"
+            exit 1
+          fi
       - name: Deploy to staging VM
         uses: appleboy/ssh-action@v1.2.0
         with:
