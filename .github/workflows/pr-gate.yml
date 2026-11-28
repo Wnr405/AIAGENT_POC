@@ -4,6 +4,9 @@ name: PR Gate
 on:
   pull_request:
     branches: [main]
+    # `edited` too: the harness job validates the PR title (it becomes the squash commit), and the default
+    # types (opened, synchronize, reopened) never re-run it after a title fix; a manual re-run reuses the old title.
+    types: [opened, synchronize, reopened, edited]
 concurrency:
   {
     group: "pr-${{ github.event.pull_request.number }}",
