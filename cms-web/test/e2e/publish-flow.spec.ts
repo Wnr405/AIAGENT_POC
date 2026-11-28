@@ -17,10 +17,14 @@ test('editor creates and publishes an article', async ({ page, request }) => {
   await page.getByLabel('Password').fill('dev-password-123');
   await page.getByRole('button', { name: 'Sign in' }).click();
 
+  // Unique per attempt: a retry runs against the same in-memory API, where the first attempt's slug already exists.
+  const suffix = Date.now().toString(36);
+  const slug = `e2e-launch-${suffix}`;
+
   await page.getByRole('link', { name: 'Articles' }).click();
   await page.getByRole('button', { name: 'New article' }).click();
   // exact: a substring match also hits the SEO "Meta title" field.
-  await page.getByRole('textbox', { name: 'Title', exact: true }).fill('E2E Launch');
+  await page.getByRole('textbox', { name: 'Title', exact: true }).fill(`E2E Launch ${suffix}`);
   await page.getByRole('textbox', { name: 'Body' }).fill('Playwright wrote this.');
   await page.getByRole('button', { name: 'Save draft' }).click();
   await expect(page).toHaveURL(/\/content\/articles\/[0-9a-f-]{36}$/);
@@ -32,7 +36,7 @@ test('editor creates and publishes an article', async ({ page, request }) => {
   await page.getByLabel('Name').fill('e2e');
   await page.getByRole('button', { name: 'New key' }).last().click();
   const key = (await page.locator('code').textContent()) ?? '';
-  const res = await request.get('/api/v1/articles/e2e-launch', { headers: { 'X-API-Key': key } });
+  const res = await request.get(`/api/v1/articles/${slug}`, { headers: { 'X-API-Key': key } });
   expect(res.status()).toBe(200);
   expect(((await res.json()) as { data: { body_html: string } }).data.body_html).toContain('Playwright wrote this.');
 });
