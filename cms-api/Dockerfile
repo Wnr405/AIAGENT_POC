@@ -2,7 +2,7 @@
 # 07-OPS-ARCH §10.2/10.3: multi-stage, non-root, no build tooling at runtime, ≤ 300 MB.
 # Build context is the REPO ROOT (pnpm workspace: one pnpm-lock.yaml at the root):
 #   docker build -f cms-api/Dockerfile .
-FROM node:20-bookworm-slim AS base
+FROM node:26-bookworm-slim AS base
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
@@ -28,7 +28,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 COPY cms-api/prisma cms-api/prisma
 RUN pnpm --dir cms-api prisma:generate && mkdir -p cms-api/node_modules
 
-FROM node:20-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 # - apt-get upgrade: take Debian security fixes newer than the base image (Trivy gate, 05-METRICS G-05).
 # - No package managers at runtime (07-OPS-ARCH §10.2): the image's bundled npm/corepack/yarn carry their own
 #   vulnerable dependencies and are unused — migrations run the installed prisma CLI with node (migrate-command.ts).
