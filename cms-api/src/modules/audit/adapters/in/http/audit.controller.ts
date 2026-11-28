@@ -9,12 +9,12 @@ import { CONTAINER } from '../../../../../shared/http/tokens';
 import { parse } from '../../../../../shared/http/validation';
 
 export const AuditQuery = z.object({
-  actor_id: z.string().uuid().optional(),
+  actor_id: z.uuid().optional(),
   action: z.string().max(80).optional(),
   target_type: z.string().max(40).optional(),
-  target_id: z.string().uuid().optional(),
-  from: z.string().datetime({ offset: true }).optional(),
-  to: z.string().datetime({ offset: true }).optional(),
+  target_id: z.uuid().optional(),
+  from: z.iso.datetime({ offset: true }).optional(),
+  to: z.iso.datetime({ offset: true }).optional(),
   page: z.coerce.number().int().optional(),
   page_size: z.coerce.number().int().optional(),
 });

@@ -37,7 +37,7 @@ describe('toHttpError (04-ARCH §6.4)', () => {
   it('maps zod errors to 422 with field paths', () => {
     let err: unknown;
     try {
-      z.object({ title: z.string(), nested: z.object({ n: z.number() }) }).parse({ nested: { n: 'x' } });
+      parse(z.object({ title: z.string(), nested: z.object({ n: z.number() }) }), { nested: { n: 'x' } });
     } catch (e) {
       err = e;
     }

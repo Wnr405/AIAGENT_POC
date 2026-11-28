@@ -25,10 +25,10 @@ export const UpdateMediaRequest = z.object({
 });
 export const ListMediaQuery = z.object({
   search: z.string().max(200).optional(),
-  uploaded_by: z.string().uuid().optional(),
+  uploaded_by: z.uuid().optional(),
   kind: z.enum(['image', 'document']).optional(),
-  from: z.string().datetime({ offset: true }).optional(),
-  to: z.string().datetime({ offset: true }).optional(),
+  from: z.iso.datetime({ offset: true }).optional(),
+  to: z.iso.datetime({ offset: true }).optional(),
   page: z.coerce.number().int().optional(),
   page_size: z.coerce.number().int().optional(),
 });

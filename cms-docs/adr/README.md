@@ -13,5 +13,6 @@
 | [0009](0009-in-process-events.md)        | Domain events dispatched in-process        | Accepted                                                           |
 | [0010](0010-jwt-and-rotating-refresh.md) | Short-lived JWT + rotating refresh token   | Accepted                                                           |
 | [0011](0011-svg-rejection.md)            | Reject unsafe SVGs instead of sanitising   | Accepted (deviation from SEC-05 wording — needs Security sign-off) |
+| [0013](0013-zod-4.md)                    | Zod 4 for validation and OpenAPI           | Accepted                                                           |
 
 New ADRs: `/adr <title>` in Claude Code, or copy the template from 04-ARCH §8.2.
