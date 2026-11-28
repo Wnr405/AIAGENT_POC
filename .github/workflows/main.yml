@@ -46,7 +46,9 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/cms-web-dist:${{ steps.meta.outputs.tag }}
       - name: Trivy — 0 critical/high
-        uses: aquasecurity/trivy-action@0.28.0
+        # Pinned to the immutable v0.36.0 release commit: the unprefixed `0.28.0` tag no longer exists, and this
+        # action's tags have been re-pointed before, so a SHA (Dependabot still updates it) beats a mutable tag.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository_owner }}/cms-api:${{ steps.meta.outputs.tag }}
           severity: CRITICAL,HIGH
