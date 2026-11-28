@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { defineConfig, devices } from '@playwright/test';
 
 /**
@@ -22,12 +23,18 @@ export default defineConfig({
     ? undefined
     : [
         {
-          command: 'pnpm --dir ../cms-api dev:memory',
+          // `e2e:server`, not `dev:memory`: no `--env-file=.env` (absent in CI, git-ignored) and no watch mode.
+          // Every value the env schema requires without a default is passed here; the JWT secret is
+          // random per run, so nothing secret is committed.
+          command: 'pnpm --dir ../cms-api e2e:server',
           url: 'http://localhost:3000/healthz',
           reuseExistingServer: !process.env.CI,
           env: {
             NODE_ENV: 'development',
             PERSISTENCE: 'memory',
+            PUBLIC_URL: 'http://localhost:5173',
+            API_PUBLIC_URL: 'http://localhost:3000',
+            JWT_SECRET: randomBytes(48).toString('hex'),
             SEED_ADMIN_PASSWORD: 'dev-password-123',
             RATE_LIMIT_LOGIN_PER_MIN: '1000',
           },

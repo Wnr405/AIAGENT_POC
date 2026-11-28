@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "tsx watch --env-file=.env src/main.ts",
     "dev:memory": "cross-env PERSISTENCE=memory tsx watch --env-file=.env src/main.ts",
+    "e2e:server": "cross-env PERSISTENCE=memory tsx src/main.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",
     "start:worker": "node dist/worker.js",
