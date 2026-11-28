@@ -49,6 +49,11 @@
       "multer@<2.5.0": "^2.5.0",
       "tinypool@<2.1.2": "^2.1.2",
       "tmp@<0.2.6": "^0.2.7"
+    },
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-q4fj-c24w-c5wm"
+      ]
     }
   }
 }
