@@ -1,0 +1,16 @@
+# Build context is the repo root (pnpm workspace). Images: cms-api/Dockerfile, cms-web/Dockerfile.
+.git
+**/node_modules
+**/dist
+**/coverage
+**/reports
+**/report
+**/.env
+**/.env.*
+!**/.env.example
+**/*.tar.gz
+cms-api/test
+cms-api/**/*.spec.ts
+cms-web/test-results
+cms-web/playwright-report
+cms-web/*.tsbuildinfo

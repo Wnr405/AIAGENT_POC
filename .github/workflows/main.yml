@@ -39,12 +39,14 @@ jobs:
           }
       - uses: docker/build-push-action@v6
         with:
-          context: cms-api
+          context: .
+          file: cms-api/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.registry }}/cms-api:${{ steps.meta.outputs.tag }}
       - uses: docker/build-push-action@v6
         with:
-          context: cms-web
+          context: .
+          file: cms-web/Dockerfile
           target: dist
           push: true
           tags: ${{ steps.meta.outputs.registry }}/cms-web-dist:${{ steps.meta.outputs.tag }}
