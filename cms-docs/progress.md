@@ -4,15 +4,15 @@
 > `.claude/hooks/session-start.mjs`; rewrite it at the end of every session (`/feature` step 8).
 > Feature list and per-requirement status: [`TRACEABILITY.md`](TRACEABILITY.md).
 
-- **Current:** harness hardening + CI repair + dependency audit · branch `feature/harness-gate-strict-skip` · PR Wnr405/AIAGENT_POC#3 (open, ready for review)
-- **Status:** audit remediation (`fix/deps-audit`, 7 commits) fast-forwarded into the PR at the user's request. Blockers before merge: PR title
-  (manual edit on GitHub); waiver 0001 needs Tech Lead sign-off (exception to 05-METRICS §15.3); first CI run of testcontainers 11 + Stryker on vitest 3.
-- **Evidence:** 2026-11-28, this checkout: `pnpm install --frozen-lockfile` ok · `pnpm audit --audit-level high` exit 0 (0 high; 2 critical = waived
-  GHSA-q4fj-c24w-c5wm only) · `pnpm -r format:check` clean · 25 commits Conventional · `node harness/gate.mjs full` (no `--allow-skip`) exit 0, 17/17.
-  - Audit commits: `4ccc5c2` waiver 0001 ignore · `4f6cbac` zod 4 (ADR-0013) · `8d67bf6`/`9f56758` nodemailer 10, sharp 0.35 · `47992ae` adapter tests ·
-    `5e0b2ad` vitest 3 / vite 6 / testcontainers 11 · `dc400cc` @cms/ scope. CI repair: `e68723c` `efe0cf3` `0dbb5e4` `d122cd9`.
-- **Next:** read CI on the pushed head; fix the PR title; get waiver 0001 approved. Behaviour change to note in review: zod 4 makes a malformed
-  ID return 422 instead of 404. Follow-up PR: `feature/harness-review-followups` (RK-01 sign-off needed; ADR-0012 Proposed).
+- **Current:** harness hardening + CI repair + dependency audit + E2E fixes · branch `feature/harness-gate-strict-skip` · PR Wnr405/AIAGENT_POC#3
+- **Status:** ready to merge on CI — all 10 PR Gate jobs green on `62015ef` (incl. E2E on chromium/firefox/webkit, security, mutation); GitHub
+  mergeable_state "clean". Not merged. Open before merge: waiver 0001 Tech Lead sign-off; PR description lacks the audit/zod 4/E2E sections.
+- **Evidence:** CI run on `62015ef` (2026-11-28): every job success. Local: `node harness/gate.mjs full` (no `--allow-skip`) 17/17;
+  Playwright chromium `--retries=0 --repeat-each=3` 6/6; `pnpm audit --audit-level high` exit 0 (only waived GHSA-q4fj-c24w-c5wm).
+  - Latest commits: `62015ef` E2E slug isolation · `df19323` Vite proxy `/api/` · `59fecc5` single-flight token refresh (logout-on-reload bug) ·
+    `ae5d519` E2E dialog race + exact Title · `fa04764` E2E API without .env · `cec72bb` PR gate re-runs on title edit · `4ccc5c2`…`dc400cc` audit.
+- **Next:** Tech Lead approves waiver 0001 (exception to 05-METRICS §15.3); add the missing PR description sections; squash-merge (user).
+  Behaviour change to call out: zod 4 returns 422 (not 404) for a malformed ID. Follow-up PR: `feature/harness-review-followups` (RK-01; ADR-0012).
 
 <!-- progress:end-head -->
 
@@ -25,3 +25,4 @@
 - 2026-11-27 · external review of main @ `e3ee801`: findings 1–3 and 5 were already fixed on this branch; #4 ("message" commit) fixed going forward — CI now checks every PR commit (`--range main..HEAD`); `e3ee801` stays (no force-push).
 - 2026-11-28 · CI repair: Node 20 pins (jscpd 4.2.4, jest-dom 6.9.1), lockfile out of Prettier, cms-web formatted, Stryker plugins listed; mutation now runs and passes.
 - 2026-11-28 · audit: fix/deps-audit merged into the PR branch (scoped workspaces, dev-tool + runtime upgrades approved by the user, waiver 0001 pending Tech Lead); local CI-equivalent checks green.
+- 2026-11-28 · E2E: first full Playwright pass; fixed logout on reload (concurrent refresh vs token rotation), Vite proxy matching /api-keys, and test races; PR gate now re-runs on title edits.
