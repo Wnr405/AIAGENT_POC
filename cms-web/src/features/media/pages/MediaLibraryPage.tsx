@@ -125,8 +125,20 @@ export function MediaLibraryPage() {
         }}
       />
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-        <TextField sx={{ maxWidth: 360 }} placeholder={t('media.searchPlaceholder')} value={m.search} onChange={(e) => m.setSearch(e.target.value)} slotProps={{ htmlInput: { 'aria-label': t('common.search') } }} />
-        <TextField select sx={{ width: 180 }} label={t('media.allTypes')} value={m.kind} onChange={(e) => m.setKind(e.target.value as KindFilter)}>
+        <TextField
+          sx={{ maxWidth: 360 }}
+          placeholder={t('media.searchPlaceholder')}
+          value={m.search}
+          onChange={(e) => m.setSearch(e.target.value)}
+          slotProps={{ htmlInput: { 'aria-label': t('common.search') } }}
+        />
+        <TextField
+          select
+          sx={{ width: 180 }}
+          label={t('media.allTypes')}
+          value={m.kind}
+          onChange={(e) => m.setKind(e.target.value as KindFilter)}
+        >
           <MenuItem value="">{t('media.allTypes')}</MenuItem>
           <MenuItem value="image">{t('media.images')}</MenuItem>
           <MenuItem value="document">{t('media.documents')}</MenuItem>

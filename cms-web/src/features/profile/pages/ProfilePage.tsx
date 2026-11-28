@@ -18,9 +18,14 @@ export function ProfilePage() {
   const { register, handleSubmit, setError, formState } = useForm<{ currentPassword: string; newPassword: string }>();
   const change = useMutation({
     mutationFn: (v: { currentPassword: string; newPassword: string }) => api.post('/admin/auth/me/password', v),
-    onSuccess: () => { notify.success(t('profile.passwordChanged')); clear('logout'); },
+    onSuccess: () => {
+      notify.success(t('profile.passwordChanged'));
+      clear('logout');
+    },
     onError: (err) => {
-      if (err instanceof ApiError) for (const [f, m] of Object.entries(err.fieldErrors())) if (f === 'currentPassword' || f === 'password') setError(f === 'password' ? 'newPassword' : f, { message: m });
+      if (err instanceof ApiError)
+        for (const [f, m] of Object.entries(err.fieldErrors()))
+          if (f === 'currentPassword' || f === 'password') setError(f === 'password' ? 'newPassword' : f, { message: m });
       notify.error(errorMessage(err));
     },
   });
@@ -28,27 +33,64 @@ export function ProfilePage() {
     <Box>
       <PageHeader title={t('profile.title')} />
       <Stack spacing={3} sx={{ maxWidth: 560 }}>
-        <Card><CardContent>
-          <Typography variant="h5" component="h2">{t('profile.account')}</Typography>
-          <Typography>{user?.name}</Typography>
-          <Typography color="text.secondary">{user?.email} · {user ? t(`users.roles.${user.role}`) : ''}</Typography>
-        </CardContent></Card>
-        <Card><CardContent>
-          <Typography variant="h5" component="h2" sx={{ mb: 2 }}>{t('profile.changePassword')}</Typography>
-          <Stack component="form" spacing={2} noValidate onSubmit={(e) => void handleSubmit((v) => change.mutate(v))(e)}>
-            <TextField type="password" autoComplete="current-password" label={t('profile.currentPassword')} {...register('currentPassword', { required: t('common.required') })} error={!!formState.errors.currentPassword} helperText={formState.errors.currentPassword?.message} />
-            <TextField type="password" autoComplete="new-password" label={t('auth.newPassword')} {...register('newPassword', { required: t('common.required') })} error={!!formState.errors.newPassword} helperText={formState.errors.newPassword?.message ?? t('auth.passwordHelp')} />
-            <div><Button type="submit" variant="contained" disabled={change.isPending}>{t('profile.changePassword')}</Button></div>
-          </Stack>
-        </CardContent></Card>
-        <Card><CardContent>
-          <Typography variant="h5" component="h2" sx={{ mb: 2 }}>{t('profile.theme')}</Typography>
-          <ToggleButtonGroup exclusive value={mode} onChange={(_, v: ThemeMode | null) => v && setMode(v)} aria-label={t('profile.theme')}>
-            <ToggleButton value="light">{t('profile.light')}</ToggleButton>
-            <ToggleButton value="dark">{t('profile.dark')}</ToggleButton>
-            <ToggleButton value="system">{t('profile.system')}</ToggleButton>
-          </ToggleButtonGroup>
-        </CardContent></Card>
+        <Card>
+          <CardContent>
+            <Typography variant="h5" component="h2">
+              {t('profile.account')}
+            </Typography>
+            <Typography>{user?.name}</Typography>
+            <Typography color="text.secondary">
+              {user?.email} · {user ? t(`users.roles.${user.role}`) : ''}
+            </Typography>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent>
+            <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
+              {t('profile.changePassword')}
+            </Typography>
+            <Stack component="form" spacing={2} noValidate onSubmit={(e) => void handleSubmit((v) => change.mutate(v))(e)}>
+              <TextField
+                type="password"
+                autoComplete="current-password"
+                label={t('profile.currentPassword')}
+                {...register('currentPassword', { required: t('common.required') })}
+                error={!!formState.errors.currentPassword}
+                helperText={formState.errors.currentPassword?.message}
+              />
+              <TextField
+                type="password"
+                autoComplete="new-password"
+                label={t('auth.newPassword')}
+                {...register('newPassword', { required: t('common.required') })}
+                error={!!formState.errors.newPassword}
+                helperText={formState.errors.newPassword?.message ?? t('auth.passwordHelp')}
+              />
+              <div>
+                <Button type="submit" variant="contained" disabled={change.isPending}>
+                  {t('profile.changePassword')}
+                </Button>
+              </div>
+            </Stack>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent>
+            <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
+              {t('profile.theme')}
+            </Typography>
+            <ToggleButtonGroup
+              exclusive
+              value={mode}
+              onChange={(_, v: ThemeMode | null) => v && setMode(v)}
+              aria-label={t('profile.theme')}
+            >
+              <ToggleButton value="light">{t('profile.light')}</ToggleButton>
+              <ToggleButton value="dark">{t('profile.dark')}</ToggleButton>
+              <ToggleButton value="system">{t('profile.system')}</ToggleButton>
+            </ToggleButtonGroup>
+          </CardContent>
+        </Card>
       </Stack>
     </Box>
   );

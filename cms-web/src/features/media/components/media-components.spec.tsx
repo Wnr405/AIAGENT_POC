@@ -12,7 +12,12 @@ const wrap = (ui: React.ReactElement) => render(<ThemeProvider theme={testTheme}
 describe('media presentational components (03-DESIGN §12.5)', () => {
   it('MediaGrid falls back to the original image without a thumbnail', async () => {
     const onOpen = vi.fn();
-    wrap(<MediaGrid items={[aMedia({ id: 'x', altText: null, filename: 'raw.png', variants: {}, url: 'https://cdn.example.com/raw.png' })]} onOpen={onOpen} />);
+    wrap(
+      <MediaGrid
+        items={[aMedia({ id: 'x', altText: null, filename: 'raw.png', variants: {}, url: 'https://cdn.example.com/raw.png' })]}
+        onOpen={onOpen}
+      />,
+    );
     const tile = screen.getByRole('button', { name: 'raw.png' });
     expect(within(tile).getByRole('presentation')).toHaveAttribute('src', 'https://cdn.example.com/raw.png');
     await userEvent.click(tile);
