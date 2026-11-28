@@ -29,8 +29,14 @@ COPY cms-api/prisma cms-api/prisma
 RUN pnpm --dir cms-api prisma:generate && mkdir -p cms-api/node_modules
 
 FROM node:20-bookworm-slim AS runtime
-RUN apt-get update && apt-get install -y --no-install-recommends wget openssl ca-certificates \
+# - apt-get upgrade: take Debian security fixes newer than the base image (Trivy gate, 05-METRICS G-05).
+# - No package managers at runtime (07-OPS-ARCH §10.2): the image's bundled npm/corepack/yarn carry their own
+#   vulnerable dependencies and are unused — migrations run the installed prisma CLI with node (migrate-command.ts).
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends wget openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-v* \
+              /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg \
     && groupadd --gid 1001 nodejs && useradd --uid 1001 --gid nodejs --shell /bin/false --create-home nodejs
 # Same layout as the workspace: most packages are hoisted to /app/node_modules, but a few versions conflict
 # and stay in /app/cms-api/node_modules, which Node must resolve first.
