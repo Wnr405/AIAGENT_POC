@@ -23,7 +23,7 @@ export const SessionResponse = z.object({
   accessToken: z.string(),
   expiresIn: z.number().int(),
   user: z.object({
-    id: z.string().uuid(),
+    id: z.uuid(),
     email: z.string(),
     name: z.string(),
     role: z.enum(['admin', 'editor', 'author']),

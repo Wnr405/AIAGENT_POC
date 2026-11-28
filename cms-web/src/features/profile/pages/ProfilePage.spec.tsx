@@ -36,7 +36,9 @@ describe('ProfilePage (03-DESIGN §12.9, FR-AUTH-05)', () => {
 
   it('maps a server password-policy error onto the new password field', async () => {
     const { user, api } = renderPage(<ProfilePage />, { user: EDITOR });
-    api.failNext('POST', /me\/password$/, 422, { error: { code: 'VALIDATION_ERROR', message: 'Password too weak', details: { field: 'password' } } });
+    api.failNext('POST', /me\/password$/, 422, {
+      error: { code: 'VALIDATION_ERROR', message: 'Password too weak', details: { field: 'password' } },
+    });
     await user.type(screen.getByLabelText('Current password'), 'correct-horse-42');
     await user.type(screen.getByLabelText('New password'), 'weak');
     await user.click(screen.getByRole('button', { name: 'Change password' }));

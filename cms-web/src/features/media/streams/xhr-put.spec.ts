@@ -6,7 +6,9 @@ class FakeXhr {
   static last: FakeXhr;
   static DONE = 4;
   readonly headers: Record<string, string> = {};
-  readonly upload: { onprogress: ((e: { lengthComputable: boolean; loaded: number; total: number }) => void) | null } = { onprogress: null };
+  readonly upload: { onprogress: ((e: { lengthComputable: boolean; loaded: number; total: number }) => void) | null } = {
+    onprogress: null,
+  };
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;
   status = 0;
@@ -30,7 +32,12 @@ class FakeXhr {
   }
 }
 
-const target = { url: 'https://storage.example.com/k', method: 'PUT' as const, headers: { 'Content-Type': 'image/png' }, expiresInSeconds: 60 };
+const target = {
+  url: 'https://storage.example.com/k',
+  method: 'PUT' as const,
+  headers: { 'Content-Type': 'image/png' },
+  expiresInSeconds: 60,
+};
 const file = new File([new Uint8Array([1])], 'a.png', { type: 'image/png' });
 
 describe('xhrPut (FR-MEDIA-04 direct upload with progress)', () => {

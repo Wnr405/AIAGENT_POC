@@ -40,6 +40,20 @@
   "pnpm": {
     "neverBuiltDependencies": [
       "cpu-features"
-    ]
+    ],
+    "overrides": {
+      "@opentelemetry/propagator-jaeger@<2.9.0": "^2.12.0",
+      "body-parser@<1.20.9": "^1.20.9",
+      "handlebars@<4.7.10": "^4.7.10",
+      "minimatch@>=10 <10.2.3": "^10.2.6",
+      "multer@<2.5.0": "^2.5.0",
+      "tinypool@<2.1.2": "^2.1.2",
+      "tmp@<0.2.6": "^0.2.7"
+    },
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-q4fj-c24w-c5wm"
+      ]
+    }
   }
 }

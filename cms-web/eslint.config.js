@@ -45,7 +45,11 @@ export default tseslint.config(
         },
       ],
       // 04-ARCH §5.5.2: side effects only in API gateway / storage wrappers.
-      'no-restricted-globals': ['error', { name: 'localStorage', message: 'Use shared/utils/storage.ts' }, { name: 'sessionStorage', message: 'Use shared/utils/storage.ts' }],
+      'no-restricted-globals': [
+        'error',
+        { name: 'localStorage', message: 'Use shared/utils/storage.ts' },
+        { name: 'sessionStorage', message: 'Use shared/utils/storage.ts' },
+      ],
       complexity: ['error', 12],
       'max-depth': ['error', 3],
       'max-lines': ['error', { max: 400, skipBlankLines: true, skipComments: true }],
@@ -64,7 +68,18 @@ export default tseslint.config(
     ignores: ['**/MediaPickerDialog.tsx', '**/ImageField.tsx'],
     rules: {
       // Type-only imports (DTO shapes, enums) are fine: they carry no behaviour.
-      '@typescript-eslint/no-restricted-imports': ['error', { patterns: [{ group: ['**/api/*', '@tanstack/react-query', '**/stores/*'], message: 'Presentational components take props only (04-ARCH §5.6.2).', allowTypeImports: true }] }],
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/api/*', '@tanstack/react-query', '**/stores/*'],
+              message: 'Presentational components take props only (04-ARCH §5.6.2).',
+              allowTypeImports: true,
+            },
+          ],
+        },
+      ],
       'no-restricted-globals': ['error', 'fetch', 'localStorage', 'sessionStorage'],
     },
   },

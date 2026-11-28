@@ -29,13 +29,13 @@ const baseSchema = z.object({
   APP_VERSION: z.string().default('0.0.0-dev'),
   ROLE: z.enum(['api', 'worker']).default('api'),
 
-  PUBLIC_URL: z.string().url(),
-  API_PUBLIC_URL: z.string().url(),
-  CORS_ALLOWED_ORIGINS: csv.default(''),
+  PUBLIC_URL: z.url(),
+  API_PUBLIC_URL: z.url(),
+  CORS_ALLOWED_ORIGINS: csv.prefault(''),
 
   HTTP_PORT: z.coerce.number().int().positive().default(3000),
   HTTP_BODY_LIMIT_MB: z.coerce.number().positive().default(25),
-  TRUST_PROXY: bool.default('false'),
+  TRUST_PROXY: bool.prefault('false'),
 
   /** `memory` runs without Postgres/Redis/S3 (demo + E2E); never in production. */
   PERSISTENCE: z.enum(['postgres', 'memory']).default('postgres'),
@@ -52,8 +52,8 @@ const baseSchema = z.object({
   OBJECT_STORAGE_PUBLIC_URL: z.string().optional(),
 
   JWT_SECRET: z.string().min(64, 'JWT_SECRET must be at least 64 characters'),
-  JWT_ACCESS_TTL: duration.default('15m'),
-  JWT_REFRESH_TTL: duration.default('14d'),
+  JWT_ACCESS_TTL: duration.prefault('15m'),
+  JWT_REFRESH_TTL: duration.prefault('14d'),
   ARGON2_MEMORY_KB: z.coerce.number().int().min(19456).default(19456),
   ARGON2_ITERATIONS: z.coerce.number().int().min(2).default(2),
   ARGON2_PARALLELISM: z.coerce.number().int().min(1).default(1),
@@ -70,7 +70,7 @@ const baseSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
-  SMTP_SECURE: bool.default('false'),
+  SMTP_SECURE: bool.prefault('false'),
 
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
   SENTRY_DSN: z.string().optional(),
@@ -82,11 +82,11 @@ const baseSchema = z.object({
   WORKER_CONCURRENCY: z.coerce.number().int().positive().default(5),
   WORKER_SCHEDULED_PUBLISH_INTERVAL_SEC: z.coerce.number().int().positive().default(30),
 
-  FEATURE_MEDIA_VARIANTS_ENABLED: bool.default('true'),
-  FEATURE_SCHEDULED_PUBLISH_ENABLED: bool.default('true'),
+  FEATURE_MEDIA_VARIANTS_ENABLED: bool.prefault('true'),
+  FEATURE_SCHEDULED_PUBLISH_ENABLED: bool.prefault('true'),
 
   MEDIA_MAX_UPLOAD_MB: z.coerce.number().positive().default(20),
-  CONTENT_CATEGORIES: csv.default('News,Reports,Guides,Announcements'),
+  CONTENT_CATEGORIES: csv.prefault('News,Reports,Guides,Announcements'),
   SOFT_DELETE_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
 });
 
@@ -123,7 +123,7 @@ function crossFieldProblems(env: RawEnv): [string, string][] {
 
 export const envSchema = baseSchema.superRefine((env, ctx) => {
   for (const [path, message] of crossFieldProblems(env)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+    ctx.addIssue({ code: 'custom', path: [path], message });
   }
 });
 

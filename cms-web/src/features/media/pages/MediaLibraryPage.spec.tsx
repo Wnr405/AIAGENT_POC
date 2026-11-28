@@ -10,7 +10,11 @@ describe('MediaLibraryPage (UR-U05, UR-E04, FR-MEDIA-*)', () => {
   it('FR-MEDIA-03: shows the grid (images and PDFs), searches and filters by type', async () => {
     const { user, api } = renderPage(<MediaLibraryPage />, {
       user: EDITOR,
-      seed: (a) => a.state.media.push(aMedia({ filename: 'hero.png', altText: 'Hero' }), aMedia({ filename: 'report.pdf', mimeType: 'application/pdf', altText: null, variants: {} })),
+      seed: (a) =>
+        a.state.media.push(
+          aMedia({ filename: 'hero.png', altText: 'Hero' }),
+          aMedia({ filename: 'report.pdf', mimeType: 'application/pdf', altText: null, variants: {} }),
+        ),
     });
     expect(await screen.findByRole('button', { name: 'Hero' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'report.pdf' })).toBeInTheDocument();
@@ -59,7 +63,17 @@ describe('MediaLibraryPage (UR-U05, UR-E04, FR-MEDIA-*)', () => {
 
   it('FR-MEDIA-07: referenced files cannot be deleted except by an Admin (force)', async () => {
     const seed = (a: Parameters<NonNullable<Parameters<typeof renderPage>[1]>['seed'] & object>[0]) =>
-      a.state.media.push(aMedia({ id: 'm2', filename: 'used.pdf', mimeType: 'application/pdf', altText: 'Used', referenced: true, width: null, height: null }));
+      a.state.media.push(
+        aMedia({
+          id: 'm2',
+          filename: 'used.pdf',
+          mimeType: 'application/pdf',
+          altText: 'Used',
+          referenced: true,
+          width: null,
+          height: null,
+        }),
+      );
     const editor = renderPage(<MediaLibraryPage />, { user: EDITOR, seed });
     await editor.user.click(await screen.findByRole('button', { name: 'Used' }));
     expect(await screen.findByText('Used by content — it cannot be deleted.')).toBeInTheDocument();
@@ -72,7 +86,9 @@ describe('MediaLibraryPage (UR-U05, UR-E04, FR-MEDIA-*)', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Delete this file?' });
     await admin.user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await admin.user.click(await screen.findByRole('button', { name: 'Delete anyway (Admin)' }));
-    await admin.user.click(within(await screen.findByRole('dialog', { name: 'Delete this file?' })).getByRole('button', { name: 'Delete' }));
+    await admin.user.click(
+      within(await screen.findByRole('dialog', { name: 'Delete this file?' })).getByRole('button', { name: 'Delete' }),
+    );
     await waitFor(() => expect(admin.api.state.requests.some((r) => r.method === 'DELETE' && r.url.includes('force=true'))).toBe(true));
   });
 
@@ -122,4 +138,3 @@ describe('MediaLibraryPage (UR-U05, UR-E04, FR-MEDIA-*)', () => {
     expect(screen.getByRole('heading', { name: 'Media library' })).toBeInTheDocument();
   });
 });
-

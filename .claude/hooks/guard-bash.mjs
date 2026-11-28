@@ -28,5 +28,5 @@ if (has(/\bprisma\s+migrate\s+reset\b|\bdocker\s+compose\b[^|;&]*\bdown\b[^|;&]*
 if (has(/\bgit\s+(reset\s+--hard|clean\s+-[a-z]*f|checkout\s+--\s+\.|restore\s+\.)/) || has(/\brm\s+-[a-z]*r[a-z]*f?\s+(\/|~|\.\.?)(\s|$)/)) {
   ask('This discards work irreversibly. Confirm it is intended.');
 }
-if (has(/\bnpm\s+(i|install)\b|\byarn\s+add\b/)) block('Use pnpm (packageManager is pinned): pnpm add <pkg> --filter <cms-api|cms-web>.');
+if (has(/\bnpm\s+(i|install)\b|\byarn\s+add\b/)) block('Use pnpm (packageManager is pinned): pnpm add <pkg> --filter <@cms/api|@cms/web>.');
 process.exit(0);

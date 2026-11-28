@@ -78,7 +78,7 @@ export class PublicContentController {
 
   @Get('media/:id')
   async media(@Param('id') id: string, @Req() req: CmsRequest, @Res() res: Response): Promise<void> {
-    const m = await this.c.publicApi.getMedia.execute(parse(z.string().uuid(), id));
+    const m = await this.c.publicApi.getMedia.execute(parse(z.uuid(), id));
     this.send(req, res, { data: presentMedia(m) }, null);
   }
 }

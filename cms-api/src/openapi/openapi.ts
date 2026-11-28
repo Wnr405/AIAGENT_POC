@@ -41,21 +41,21 @@ extendZodWithOpenApi(z);
  * `pnpm openapi:generate` writes openapi.json; CI fails if it changed.
  */
 const ErrorEnvelope = z.object({
-  error: z.object({ code: z.string(), message: z.string(), details: z.record(z.unknown()).optional() }),
+  error: z.object({ code: z.string(), message: z.string(), details: z.record(z.string(), z.unknown()).optional() }),
 });
 const Pagination = z.object({ page: z.number(), page_size: z.number(), total: z.number(), total_pages: z.number() });
-const ListOf = (item: z.ZodTypeAny) => z.object({ data: z.array(item), pagination: Pagination });
+const ListOf = (item: z.ZodType) => z.object({ data: z.array(item), pagination: Pagination });
 
 const PublicMedia = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   url: z.string(),
   alt: z.string().nullable(),
   width: z.number().nullable(),
   height: z.number().nullable(),
-  variants: z.record(z.object({ url: z.string(), width: z.number(), height: z.number() })),
+  variants: z.record(z.string(), z.object({ url: z.string(), width: z.number(), height: z.number() })),
 });
 const PublicSummary = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   type: z.enum(['article', 'page']),
   title: z.string(),
   slug: z.string(),
@@ -64,17 +64,17 @@ const PublicSummary = z.object({
   featured_image: PublicMedia.nullable(),
   tags: z.array(z.string()).optional(),
   category: z.string().nullable().optional(),
-  parent_id: z.string().uuid().nullable().optional(),
-  published_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  parent_id: z.uuid().nullable().optional(),
+  published_at: z.iso.datetime(),
+  updated_at: z.iso.datetime(),
 });
 const PublicDetail = PublicSummary.extend({
-  body: z.record(z.unknown()).describe('Sanitised ProseMirror/TipTap JSON document'),
+  body: z.record(z.string(), z.unknown()).describe('Sanitised ProseMirror/TipTap JSON document'),
   body_html: z.string(),
   seo: z.object({ title: z.string(), description: z.string(), social_image: PublicMedia.nullable() }),
 });
 
-const json = (schema: z.ZodTypeAny) => ({ content: { 'application/json': { schema } } });
+const json = (schema: z.ZodType) => ({ content: { 'application/json': { schema } } });
 const errors = {
   400: { description: 'Malformed request', ...json(ErrorEnvelope) },
   401: { description: 'Unauthenticated', ...json(ErrorEnvelope) },
@@ -84,16 +84,18 @@ const errors = {
   422: { description: 'Validation error', ...json(ErrorEnvelope) },
   429: { description: 'Rate limited', ...json(ErrorEnvelope) },
 };
-const ok = (schema: z.ZodTypeAny = z.record(z.unknown()), description = 'OK') => ({ description, ...json(schema) });
+const ok = (schema: z.ZodType = z.record(z.string(), z.unknown()), description = 'OK') => ({
+  description,
+  ...json(schema),
+});
 
 type Spec = Omit<RouteConfig, 'responses'> & { responses?: RouteConfig['responses'] };
 
 type Security = { [name: string]: string[] }[];
 type Add = (tag: string, security: Security | undefined, spec: Spec) => void;
-const id = z.object({ id: z.string().uuid() });
+const id = z.object({ id: z.uuid() });
 
-function registerAdminRoutes(add: Add, admin: Security): void {
-  // ── Auth ──────────────────────────────────────────────────────────────
+function registerAuthRoutes(add: Add, admin: Security): void {
   add('Auth', undefined, {
     method: 'post',
     path: '/api/admin/auth/login',
@@ -136,8 +138,9 @@ function registerAdminRoutes(add: Add, admin: Security): void {
     request: { body: json(ChangePasswordRequest) },
     responses: { 204: { description: 'Changed; all sessions revoked' } },
   });
+}
 
-  // ── Users ─────────────────────────────────────────────────────────────
+function registerUsersRoutes(add: Add, admin: Security): void {
   add('Users', admin, { method: 'get', path: '/api/admin/users', request: { query: ListUsersQuery } });
   add('Users', admin, { method: 'post', path: '/api/admin/users', request: { body: json(InviteUserRequest) } });
   add('Users', admin, {
@@ -152,8 +155,9 @@ function registerAdminRoutes(add: Add, admin: Security): void {
     request: { params: id },
     responses: { 202: { description: 'Email sent' } },
   });
+}
 
-  // ── Content ───────────────────────────────────────────────────────────
+function registerContentRoutes(add: Add, admin: Security): void {
   add('Content', admin, { method: 'get', path: '/api/admin/content', request: { query: ListContentQuery } });
   add('Content', admin, { method: 'post', path: '/api/admin/content', request: { body: json(CreateContentRequest) } });
   add('Content', admin, { method: 'get', path: '/api/admin/content/stats' });
@@ -274,8 +278,11 @@ export function buildOpenApiDocument(version: string): ReturnType<OpenApiGenerat
   const add: Add = (tag, security, spec) => {
     r.registerPath({ tags: [tag], security, ...spec, responses: { 200: ok(), ...errors, ...spec.responses } });
   };
-  registerAdminRoutes(add, [{ [bearer.name]: [] }]);
-  registerMediaAuditKeys(add, [{ [bearer.name]: [] }]);
+  const admin: Security = [{ [bearer.name]: [] }];
+  registerAuthRoutes(add, admin);
+  registerUsersRoutes(add, admin);
+  registerContentRoutes(add, admin);
+  registerMediaAuditKeys(add, admin);
   registerPublicRoutes(add, [{ [apiKey.name]: [] }]);
 
   return new OpenApiGeneratorV31(r.definitions).generateDocument({

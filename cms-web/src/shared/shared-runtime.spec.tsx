@@ -35,6 +35,25 @@ describe('session refresh (04-ARCH §6.3, SEC-11)', () => {
     expect(selectRole(useSessionStore.getState())).toBe('editor');
   });
 
+  it('FR-AUTH-04: concurrent refreshes share one request, so token rotation cannot log the user out', async () => {
+    // StrictMode runs AuthGate's effect twice; with rotation + reuse detection a second request carrying the
+    // same cookie gets 401 and clears the session. Every caller must share the in-flight request instead.
+    let calls = 0;
+    server.use(
+      http.post('/api/admin/auth/refresh', () => {
+        calls += 1;
+        return HttpResponse.json({ accessToken: `fresh-${calls}`, expiresIn: 900, user });
+      }),
+    );
+    const [a, b] = await Promise.all([refreshSession(), refreshSession()]);
+    expect(calls).toBe(1);
+    expect(a).toBe('fresh-1');
+    expect(b).toBe('fresh-1');
+    // Once settled, a later refresh is a new request (no stale cached token).
+    expect(await refreshSession()).toBe('fresh-2');
+    expect(calls).toBe(2);
+  });
+
   it('clears the session when refresh is refused, and returns null on network failure', async () => {
     expect(await refreshSession()).toBeNull(); // default handler answers 401
     expect(useSessionStore.getState().status).toBe('anonymous');
